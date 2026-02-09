@@ -64,6 +64,17 @@ export default function AddExpense() {
       if (isFriend) {
         setSelectedFriends((prev) => [...prev, data.id]);
       } else {
+        // Auto-send friend request
+        const ids = [user!.id, data.id].sort();
+        const { error: frError } = await supabase.from("friendships").insert({
+          user_id_1: ids[0],
+          user_id_2: ids[1],
+          requested_by: user!.id,
+          status: "pending",
+        });
+        if (frError && !frError.message.includes("duplicate")) {
+          console.error("Friend request error:", frError);
+        }
         setInvitedUsers((prev) => [...prev, { id: data.id, name: data.name || "Usuário", email: data.email || email }]);
         setSelectedFriends((prev) => [...prev, data.id]);
       }

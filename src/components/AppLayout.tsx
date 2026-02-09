@@ -5,6 +5,8 @@ import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut } from "
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { AnimatePresence } from "framer-motion";
+import PageTransition from "@/components/PageTransition";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -21,7 +23,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Desktop sidebar */}
       {!isMobile && (
         <aside className="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-card p-4">
           <div className="mb-8 flex items-center gap-2 px-2">
@@ -54,12 +55,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </aside>
       )}
 
-      {/* Main content */}
       <main className={cn("flex-1", isMobile ? "pb-20" : "")}>
-        <div className="mx-auto max-w-4xl p-4 md:p-6">{children}</div>
+        <div className="mx-auto max-w-4xl p-4 md:p-6">
+          <AnimatePresence mode="wait">
+            <PageTransition key={location.pathname}>
+              {children}
+            </PageTransition>
+          </AnimatePresence>
+        </div>
       </main>
 
-      {/* Mobile bottom nav */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 py-2">
           {navItems.map(({ to, icon: Icon, label }) => (

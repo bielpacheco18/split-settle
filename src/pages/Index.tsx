@@ -1,20 +1,67 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBalances } from "@/hooks/useExpenses";
 import { useFriends } from "@/hooks/useFriends";
 import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { PlusCircle, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { PlusCircle, TrendingUp, TrendingDown, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, AnimatedCard } from "@/components/PageTransition";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Index() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: balances, isLoading } = useBalances();
   const { acceptedFriends } = useFriends();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [settleTarget, setSettleTarget] = useState<{ id: string; name: string; amount: number } | null>(null);
+  const [settleAmount, setSettleAmount] = useState("");
+  const [settling, setSettling] = useState(false);
+
+  const handleSettle = async () => {
+    if (!settleTarget || !user) return;
+    const amount = parseFloat(settleAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: "Informe um valor válido", variant: "destructive" });
+      return;
+    }
+    setSettling(true);
+    try {
+      const isIOwe = settleTarget.amount < 0;
+      const { error } = await supabase.from("settlements").insert({
+        from_user_id: isIOwe ? user.id : settleTarget.id,
+        to_user_id: isIOwe ? settleTarget.id : user.id,
+        amount,
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      toast({ title: "Quitação registrada!" });
+      setSettleTarget(null);
+      setSettleAmount("");
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setSettling(false);
+    }
+  };
 
   const balanceEntries = Object.entries(balances ?? {});
   const totalOwed = balanceEntries.filter(([, v]) => v > 0).reduce((s, [, v]) => s + v, 0);
@@ -102,6 +149,7 @@ export default function Index() {
               const friend = friendMap[friendId];
               const name = friend?.name || "Usuário";
               const initials = name.slice(0, 2).toUpperCase();
+              const absBalance = Math.abs(balance);
               return (
                 <motion.div
                   key={friendId}
@@ -114,11 +162,32 @@ export default function Index() {
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{name}</span>
+                    <div>
+                      <span className="font-medium">{name}</span>
+                      <p className="text-xs text-muted-foreground">
+                        {balance > 0 ? "te deve" : "você deve"}
+                      </p>
+                    </div>
                   </div>
-                  <span className={balance > 0 ? "font-semibold text-success" : "font-semibold text-destructive"}>
-                    {balance > 0 ? "+" : ""}R$ {balance.toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={balance > 0 ? "font-semibold text-success" : "font-semibold text-destructive"}>
+                      R$ {absBalance.toFixed(2)}
+                    </span>
+                    {absBalance > 0.01 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-xs"
+                        onClick={() => {
+                          setSettleTarget({ id: friendId, name, amount: balance });
+                          setSettleAmount(absBalance.toFixed(2));
+                        }}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Quitar
+                      </Button>
+                    )}
+                  </div>
                 </motion.div>
               );
             })}
@@ -130,6 +199,37 @@ export default function Index() {
           </CardContent>
         </Card>
       </StaggerItem>
+
+      <Dialog open={!!settleTarget} onOpenChange={(open) => !open && setSettleTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quitar dívida</DialogTitle>
+            <DialogDescription>
+              {settleTarget && (
+                settleTarget.amount < 0
+                  ? `Você deve R$ ${Math.abs(settleTarget.amount).toFixed(2)} para ${settleTarget.name}.`
+                  : `${settleTarget.name} te deve R$ ${settleTarget.amount.toFixed(2)}.`
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Valor a quitar (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={settleAmount}
+              onChange={(e) => setSettleAmount(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettleTarget(null)}>Cancelar</Button>
+            <Button onClick={handleSettle} disabled={settling}>
+              {settling ? "Salvando..." : "Confirmar quitação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </StaggerContainer>
   );
 }

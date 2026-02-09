@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFriends } from "@/hooks/useFriends";
 import { useExpenses, ExpenseParticipant } from "@/hooks/useExpenses";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { Search, UserPlus } from "lucide-react";
 
 const CATEGORIES = [
   "alimentação", "transporte", "moradia", "lazer", "saúde", "educação", "compras", "outros",
@@ -30,6 +32,49 @@ export default function AddExpense() {
   const [splitType, setSplitType] = useState<"equal" | "percentage" | "exact">("equal");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+  const [emailSearch, setEmailSearch] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+
+  const handleEmailSearch = async () => {
+    const email = emailSearch.trim().toLowerCase();
+    if (!email) return;
+    if (email === user?.email) {
+      toast({ title: "Você já é participante", variant: "destructive" });
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .eq("email", email)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        toast({ title: "Usuário não encontrado", description: "Nenhuma conta com esse email.", variant: "destructive" });
+        return;
+      }
+      if (selectedFriends.includes(data.id) || invitedUsers.some((u) => u.id === data.id)) {
+        toast({ title: "Já adicionado", variant: "destructive" });
+        return;
+      }
+      // Check if already a friend
+      const isFriend = acceptedFriends.some((f: any) => f.id === data.id);
+      if (isFriend) {
+        setSelectedFriends((prev) => [...prev, data.id]);
+      } else {
+        setInvitedUsers((prev) => [...prev, { id: data.id, name: data.name || "Usuário", email: data.email || email }]);
+        setSelectedFriends((prev) => [...prev, data.id]);
+      }
+      setEmailSearch("");
+      toast({ title: `${data.name || "Usuário"} adicionado!` });
+    } catch (err: any) {
+      toast({ title: "Erro na busca", description: err.message, variant: "destructive" });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const total = parseFloat(totalAmount) || 0;
   const allParticipantIds = [user!.id, ...selectedFriends];
@@ -118,25 +163,61 @@ export default function AddExpense() {
         <Card>
           <CardHeader><CardTitle className="text-lg">Participantes</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {acceptedFriends.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Adicione amigos primeiro para dividir despesas.</p>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Buscar por email..."
+                value={emailSearch}
+                onChange={(e) => setEmailSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleEmailSearch())}
+              />
+              <Button type="button" size="icon" variant="outline" onClick={handleEmailSearch} disabled={searchLoading}>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {acceptedFriends.length === 0 && invitedUsers.length === 0 && selectedFriends.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Busque por email ou adicione amigos para dividir despesas.</p>
             ) : (
-              acceptedFriends.map((f: any) => (
-                <label key={f.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-accent/50">
-                  <Checkbox
-                    checked={selectedFriends.includes(f.id)}
-                    onCheckedChange={(checked) => {
-                      setSelectedFriends((prev) =>
-                        checked ? [...prev, f.id] : prev.filter((id) => id !== f.id)
-                      );
-                    }}
-                  />
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{f.name || "Usuário"}</span>
-                </label>
-              ))
+              <>
+                {acceptedFriends.map((f: any) => (
+                  <label key={f.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-accent/50">
+                    <Checkbox
+                      checked={selectedFriends.includes(f.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedFriends((prev) =>
+                          checked ? [...prev, f.id] : prev.filter((id) => id !== f.id)
+                        );
+                      }}
+                    />
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{f.name || "Usuário"}</span>
+                  </label>
+                ))}
+                {invitedUsers
+                  .filter((u) => !acceptedFriends.some((f: any) => f.id === u.id))
+                  .map((u) => (
+                    <label key={u.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 transition-colors hover:bg-accent/50">
+                      <Checkbox
+                        checked={selectedFriends.includes(u.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedFriends((prev) =>
+                            checked ? [...prev, u.id] : prev.filter((id) => id !== u.id)
+                          );
+                        }}
+                      />
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs"><UserPlus className="h-3 w-3" /></AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{u.name}</span>
+                        <span className="text-xs text-muted-foreground">{u.email}</span>
+                      </div>
+                    </label>
+                  ))}
+              </>
             )}
           </CardContent>
         </Card>
@@ -158,7 +239,8 @@ export default function AddExpense() {
                 {allParticipantIds.map((id) => {
                   const isMe = id === user!.id;
                   const friend = acceptedFriends.find((f: any) => f.id === id);
-                  const name = isMe ? "Você" : friend?.name || "Usuário";
+                  const invited = invitedUsers.find((u) => u.id === id);
+                  const name = isMe ? "Você" : friend?.name || invited?.name || "Usuário";
                   return (
                     <div key={id} className="flex items-center justify-between rounded-lg border border-border p-3">
                       <span className="text-sm font-medium">{name}</span>

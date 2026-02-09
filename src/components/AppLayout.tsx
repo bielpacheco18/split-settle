@@ -1,0 +1,82 @@
+import { ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/friends", icon: Users, label: "Amigos" },
+  { to: "/add-expense", icon: PlusCircle, label: "Despesa" },
+  { to: "/history", icon: History, label: "Histórico" },
+  { to: "/reports", icon: BarChart3, label: "Relatórios" },
+];
+
+export default function AppLayout({ children }: { children: ReactNode }) {
+  const { signOut } = useAuth();
+  const location = useLocation();
+  const isMobile = useIsMobile();
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <aside className="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-card p-4">
+          <div className="mb-8 flex items-center gap-2 px-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+              <span className="text-lg font-bold text-primary-foreground">S</span>
+            </div>
+            <span className="text-lg font-bold text-foreground">SplitEasy</span>
+          </div>
+          <nav className="flex flex-1 flex-col gap-1">
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  location.pathname === to
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <Button variant="ghost" className="justify-start gap-3 text-muted-foreground" onClick={signOut}>
+            <LogOut className="h-5 w-5" />
+            Sair
+          </Button>
+        </aside>
+      )}
+
+      {/* Main content */}
+      <main className={cn("flex-1", isMobile ? "pb-20" : "")}>
+        <div className="mx-auto max-w-4xl p-4 md:p-6">{children}</div>
+      </main>
+
+      {/* Mobile bottom nav */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 py-2">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className={cn(
+                "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                location.pathname === to ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Icon className="h-5 w-5" />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+}

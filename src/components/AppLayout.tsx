@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { signOut } = useAuth();
@@ -140,6 +141,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <span>Mais</span>
             </button>
           </nav>
+
+          <PWAInstallBanner />
 
           {/* More sheet */}
           <Sheet open={moreOpen} onOpenChange={setMoreOpen}>

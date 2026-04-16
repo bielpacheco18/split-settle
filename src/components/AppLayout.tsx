@@ -26,6 +26,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { to: "/profile", icon: UserCircle, label: "Perfil", badge: 0 },
   ];
 
+  const mobileNavItems = [
+    { to: "/", icon: LayoutDashboard, label: "Dashboard", badge: 0 },
+    { to: "/friends", icon: Users, label: "Amigos", badge: pendingCount },
+    { to: "/add-expense", icon: PlusCircle, label: "Despesa", badge: 0 },
+    { to: "/chat", icon: Bot, label: "IA", badge: 0 },
+    { to: "/profile", icon: UserCircle, label: "Perfil", badge: 0 },
+  ];
+
   return (
     <div className="flex min-h-screen bg-background">
       {!isMobile && (
@@ -79,7 +87,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 py-2">
-          {navItems.map(({ to, icon: Icon, label, badge }) => (
+          {mobileNavItems.map(({ to, icon: Icon, label, badge }) => (
             <Link
               key={to}
               to={to}

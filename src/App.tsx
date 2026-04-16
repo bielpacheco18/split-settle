@@ -11,8 +11,10 @@ import Friends from "@/pages/Friends";
 import AddExpense from "@/pages/AddExpense";
 import ExpenseHistory from "@/pages/ExpenseHistory";
 import Reports from "@/pages/Reports";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import { useEffect } from "react";
+import { useRealtime } from "@/hooks/useRealtime";
 
 const queryClient = new QueryClient();
 
@@ -30,11 +32,17 @@ function DarkModeInit() {
   return null;
 }
 
+function RealtimeProvider() {
+  useRealtime();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <DarkModeInit />
+        <RealtimeProvider />
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -45,6 +53,7 @@ const App = () => (
             <Route path="/add-expense" element={<ProtectedRoute><AddExpense /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><ExpenseHistory /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

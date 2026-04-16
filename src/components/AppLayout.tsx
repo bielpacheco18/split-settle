@@ -1,25 +1,29 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut } from "lucide-react";
+import { useFriends } from "@/hooks/useFriends";
+import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/friends", icon: Users, label: "Amigos" },
-  { to: "/add-expense", icon: PlusCircle, label: "Despesa" },
-  { to: "/history", icon: History, label: "Histórico" },
-  { to: "/reports", icon: BarChart3, label: "Relatórios" },
-];
-
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { signOut } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { pendingReceived } = useFriends();
+  const pendingCount = pendingReceived.length;
+
+  const navItems = [
+    { to: "/", icon: LayoutDashboard, label: "Dashboard", badge: 0 },
+    { to: "/friends", icon: Users, label: "Amigos", badge: pendingCount },
+    { to: "/add-expense", icon: PlusCircle, label: "Despesa", badge: 0 },
+    { to: "/history", icon: History, label: "Histórico", badge: 0 },
+    { to: "/reports", icon: BarChart3, label: "Relatórios", badge: 0 },
+    { to: "/profile", icon: UserCircle, label: "Perfil", badge: 0 },
+  ];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -32,7 +36,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <span className="text-lg font-bold text-foreground">SplitEasy</span>
           </div>
           <nav className="flex flex-1 flex-col gap-1">
-            {navItems.map(({ to, icon: Icon, label }) => (
+            {navItems.map(({ to, icon: Icon, label, badge }) => (
               <Link
                 key={to}
                 to={to}
@@ -43,12 +47,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <div className="relative">
+                  <Icon className="h-5 w-5" />
+                  {badge > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
+                </div>
                 {label}
               </Link>
             ))}
           </nav>
-          <Button variant="ghost" className="justify-start gap-3 text-muted-foreground" onClick={signOut}>
+          <Button variant="ghost" className="justify-start gap-3 text-muted-foreground hover:text-destructive" onClick={signOut}>
             <LogOut className="h-5 w-5" />
             Sair
           </Button>
@@ -67,7 +78,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 py-2">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label, badge }) => (
             <Link
               key={to}
               to={to}
@@ -76,7 +87,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 location.pathname === to ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <div className="relative">
+                <Icon className="h-5 w-5" />
+                {badge > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </div>
               <span>{label}</span>
             </Link>
           ))}

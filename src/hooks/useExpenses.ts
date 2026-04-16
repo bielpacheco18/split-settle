@@ -46,16 +46,9 @@ export function useExpenses() {
 
       const { data: expense, error: expError } = await supabase
         .from("expenses")
-        .insert({
-          description,
-          total_amount,
-          category,
-          expense_date,
-          paid_by: user.id,
-        })
+        .insert({ description, total_amount, category, expense_date, paid_by: user.id })
         .select()
         .single();
-
       if (expError) throw expError;
 
       const participantRows = participants.map((p) => ({
@@ -64,7 +57,6 @@ export function useExpenses() {
         amount_due: p.amount_due,
         split_type: p.split_type,
       }));
-
       const { error: partError } = await supabase.from("expense_participants").insert(participantRows);
       if (partError) throw partError;
 
@@ -80,7 +72,52 @@ export function useExpenses() {
     },
   });
 
-  return { expensesQuery, createExpense };
+  const updateExpense = useMutation({
+    mutationFn: async ({
+      id,
+      description,
+      total_amount,
+      category,
+      expense_date,
+    }: {
+      id: string;
+      description: string;
+      total_amount: number;
+      category: string;
+      expense_date: string;
+    }) => {
+      const { error } = await supabase
+        .from("expenses")
+        .update({ description, total_amount, category, expense_date })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      toast({ title: "Despesa atualizada!" });
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteExpense = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      toast({ title: "Despesa excluída." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return { expensesQuery, createExpense, updateExpense, deleteExpense };
 }
 
 export function useBalances() {
@@ -91,30 +128,25 @@ export function useBalances() {
     queryFn: async () => {
       if (!user) return {};
 
-      // Get all expenses where user is payer or participant
       const { data: expenses } = await supabase
         .from("expenses")
         .select("*, expense_participants(*)");
 
-      // Get all settlements
       const { data: settlements } = await supabase
         .from("settlements")
         .select("*");
 
       const balances: Record<string, number> = {};
 
-      // Process expenses
       (expenses ?? []).forEach((exp: any) => {
         const participants = exp.expense_participants ?? [];
         if (exp.paid_by === user.id) {
-          // I paid — others owe me
           participants.forEach((p: any) => {
             if (p.user_id !== user.id) {
               balances[p.user_id] = (balances[p.user_id] ?? 0) + Number(p.amount_due);
             }
           });
         } else {
-          // Someone else paid — I might owe them
           const myPart = participants.find((p: any) => p.user_id === user.id);
           if (myPart) {
             balances[exp.paid_by] = (balances[exp.paid_by] ?? 0) - Number(myPart.amount_due);
@@ -122,13 +154,10 @@ export function useBalances() {
         }
       });
 
-      // Process settlements
       (settlements ?? []).forEach((s: any) => {
         if (s.from_user_id === user.id) {
-          // I paid someone
           balances[s.to_user_id] = (balances[s.to_user_id] ?? 0) + Number(s.amount);
         } else if (s.to_user_id === user.id) {
-          // Someone paid me
           balances[s.from_user_id] = (balances[s.from_user_id] ?? 0) - Number(s.amount);
         }
       });

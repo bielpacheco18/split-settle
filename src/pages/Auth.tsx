@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Wallet } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+type Mode = "login" | "register" | "forgot";
 
 export default function Auth() {
   const { user, loading } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -25,7 +28,22 @@ export default function Auth() {
     e.preventDefault();
     setSubmitting(true);
 
-    if (isLogin) {
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Email enviado!", description: "Verifique sua caixa de entrada para redefinir a senha." });
+        setMode("login");
+        setEmail("");
+      }
+      setSubmitting(false);
+      return;
+    }
+
+    if (mode === "login") {
       const { error } = await signIn(email, password);
       if (error) {
         toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
@@ -46,6 +64,18 @@ export default function Auth() {
     setSubmitting(false);
   };
 
+  const titles: Record<Mode, string> = {
+    login: "Entre na sua conta",
+    register: "Crie sua conta",
+    forgot: "Recuperar senha",
+  };
+
+  const buttonLabels: Record<Mode, string> = {
+    login: "Entrar",
+    register: "Criar conta",
+    forgot: "Enviar email de recuperação",
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -54,13 +84,11 @@ export default function Auth() {
             <Wallet className="h-7 w-7 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl">SplitEasy</CardTitle>
-          <CardDescription>
-            {isLogin ? "Entre na sua conta" : "Crie sua conta"}
-          </CardDescription>
+          <CardDescription>{titles[mode]}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {mode === "register" && (
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" />
@@ -70,19 +98,47 @@ export default function Auth() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-            </div>
+            {mode !== "forgot" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode("forgot"); setPassword(""); }}
+                      className="text-xs text-primary underline-offset-4 hover:underline"
+                    >
+                      Esqueceu a senha?
+                    </button>
+                  )}
+                </div>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Carregando..." : isLogin ? "Entrar" : "Criar conta"}
+              {submitting ? "Carregando..." : buttonLabels[mode]}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            {isLogin ? "Não tem conta?" : "Já tem conta?"}{" "}
-            <button onClick={() => setIsLogin(!isLogin)} className="text-primary underline-offset-4 hover:underline">
-              {isLogin ? "Cadastre-se" : "Entre"}
-            </button>
+
+          <div className="mt-4 space-y-2 text-center text-sm text-muted-foreground">
+            {mode === "forgot" ? (
+              <p>
+                Lembrou?{" "}
+                <button onClick={() => setMode("login")} className="text-primary underline-offset-4 hover:underline">
+                  Voltar ao login
+                </button>
+              </p>
+            ) : (
+              <p>
+                {mode === "login" ? "Não tem conta?" : "Já tem conta?"}{" "}
+                <button
+                  onClick={() => setMode(mode === "login" ? "register" : "login")}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  {mode === "login" ? "Cadastre-se" : "Entre"}
+                </button>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

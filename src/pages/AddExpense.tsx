@@ -12,7 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, Send } from "lucide-react";
+
+function sendInvite(toEmail: string, fromEmail: string) {
+  const appUrl = window.location.origin;
+  const text = `Oi! Te convido para usar o SplitEasy — o app para dividir despesas com amigos.\n\nBaixe aqui: ${appUrl}\n\nDepois de criar sua conta, me adicione pelo email: ${fromEmail}`;
+  if (navigator.share) {
+    navigator.share({ title: "Convite SplitEasy", text }).catch(() => {});
+  } else {
+    window.open(`mailto:${toEmail}?subject=${encodeURIComponent("Convite para o SplitEasy")}&body=${encodeURIComponent(text)}`, "_blank");
+  }
+}
 
 const CATEGORIES = [
   "alimentação", "transporte", "moradia", "lazer", "saúde", "educação", "compras", "outros",
@@ -35,6 +45,7 @@ export default function AddExpense() {
   const [emailSearch, setEmailSearch] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
 
   const handleEmailSearch = async () => {
     const email = emailSearch.trim().toLowerCase();
@@ -43,6 +54,7 @@ export default function AddExpense() {
       toast({ title: "Você já é participante", variant: "destructive" });
       return;
     }
+    setNotFoundEmail(null);
     setSearchLoading(true);
     try {
       const { data, error } = await supabase
@@ -52,7 +64,7 @@ export default function AddExpense() {
         .maybeSingle();
       if (error) throw error;
       if (!data) {
-        toast({ title: "Usuário não encontrado", description: "Nenhuma conta com esse email.", variant: "destructive" });
+        setNotFoundEmail(email);
         return;
       }
       if (selectedFriends.includes(data.id) || invitedUsers.some((u) => u.id === data.id)) {
@@ -81,7 +93,8 @@ export default function AddExpense() {
       setEmailSearch("");
       toast({ title: `${data.name || "Usuário"} adicionado!` });
     } catch (err: any) {
-      toast({ title: "Erro na busca", description: err.message, variant: "destructive" });
+      // If table doesn't exist or RLS error, still show invite option
+      setNotFoundEmail(email);
     } finally {
       setSearchLoading(false);
     }
@@ -179,13 +192,36 @@ export default function AddExpense() {
                 type="email"
                 placeholder="Buscar por email..."
                 value={emailSearch}
-                onChange={(e) => setEmailSearch(e.target.value)}
+                onChange={(e) => { setEmailSearch(e.target.value); setNotFoundEmail(null); }}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleEmailSearch())}
               />
               <Button type="button" size="icon" variant="outline" onClick={handleEmailSearch} disabled={searchLoading}>
                 <Search className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Not found — invite prompt */}
+            {notFoundEmail && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{notFoundEmail}</span> ainda não tem conta no SplitEasy.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    sendInvite(notFoundEmail, user?.email ?? "");
+                    toast({ title: "Convite enviado!", description: `${notFoundEmail} foi convidado(a).` });
+                    setNotFoundEmail(null);
+                    setEmailSearch("");
+                  }}
+                >
+                  <Send className="h-4 w-4" />
+                  Convidar {notFoundEmail}
+                </Button>
+              </div>
+            )}
 
             {acceptedFriends.length === 0 && invitedUsers.length === 0 && selectedFriends.length === 0 ? (
               <p className="text-sm text-muted-foreground">Busque por email ou adicione amigos para dividir despesas.</p>

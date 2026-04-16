@@ -39,8 +39,13 @@ export default function Index() {
   const handleSettle = async () => {
     if (!settleTarget || !user) return;
     const amount = parseFloat(settleAmount);
+    const maxAmount = Math.abs(settleTarget.amount);
     if (!amount || amount <= 0) {
       toast({ title: "Informe um valor válido", variant: "destructive" });
+      return;
+    }
+    if (amount > maxAmount + 0.001) {
+      toast({ title: "Valor maior que a dívida", description: `O máximo é R$ ${maxAmount.toFixed(2)}`, variant: "destructive" });
       return;
     }
     setSettling(true);
@@ -218,6 +223,7 @@ export default function Index() {
               type="number"
               step="0.01"
               min="0.01"
+              max={settleTarget ? Math.abs(settleTarget.amount).toFixed(2) : undefined}
               value={settleAmount}
               onChange={(e) => setSettleAmount(e.target.value)}
             />

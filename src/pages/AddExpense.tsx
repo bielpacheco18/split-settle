@@ -163,7 +163,7 @@ export default function AddExpense() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Valor total (R$)</Label>
-                <Input type="number" step="0.01" min="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0,00" required />
+                <Input type="number" inputMode="decimal" step="0.01" min="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0,00" required />
               </div>
               <div className="space-y-2">
                 <Label>Data</Label>
@@ -296,6 +296,7 @@ export default function AddExpense() {
                       ) : (
                         <Input
                           type="number"
+                          inputMode="decimal"
                           step="0.01"
                           className="w-28"
                           placeholder={splitType === "percentage" ? "%" : "R$"}

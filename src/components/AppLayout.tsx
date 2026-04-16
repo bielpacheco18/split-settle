@@ -144,6 +144,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
           <PWAInstallBanner />
 
+          {/* FAB — add expense, hidden on /add-expense */}
+          {location.pathname !== "/add-expense" && (
+            <Link
+              to="/add-expense"
+              className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:scale-95 transition-transform"
+            >
+              <PlusCircle className="h-6 w-6 text-primary-foreground" />
+            </Link>
+          )}
+
           {/* More sheet */}
           <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
             <SheetContent side="bottom" className="rounded-t-2xl pb-8">

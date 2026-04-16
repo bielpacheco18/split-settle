@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, AnimatedCard } from "@/components/PageTransition";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import PullToRefresh from "@/components/PullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +33,14 @@ export default function Index() {
   const { acceptedFriends } = useFriends();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["balances"] }),
+      queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+    ]);
+  };
 
   const [settleTarget, setSettleTarget] = useState<{ id: string; name: string; amount: number } | null>(null);
   const [settleAmount, setSettleAmount] = useState("");
@@ -75,6 +85,7 @@ export default function Index() {
   const friendMap = Object.fromEntries(acceptedFriends.map((f: any) => [f.id, f]));
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <StaggerContainer className="space-y-6">
       <StaggerItem>
         <h1 className="text-2xl font-bold">
@@ -237,5 +248,6 @@ export default function Index() {
         </DialogContent>
       </Dialog>
     </StaggerContainer>
+    </PullToRefresh>
   );
 }

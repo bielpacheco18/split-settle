@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFriends } from "@/hooks/useFriends";
-import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut, UserCircle } from "lucide-react";
+import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut, UserCircle, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { to: "/add-expense", icon: PlusCircle, label: "Despesa", badge: 0 },
     { to: "/history", icon: History, label: "Histórico", badge: 0 },
     { to: "/reports", icon: BarChart3, label: "Relatórios", badge: 0 },
+    { to: "/chat", icon: Bot, label: "IA", badge: 0 },
     { to: "/profile", icon: UserCircle, label: "Perfil", badge: 0 },
   ];
 

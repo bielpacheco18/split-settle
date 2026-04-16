@@ -12,6 +12,7 @@ import AddExpense from "@/pages/AddExpense";
 import ExpenseHistory from "@/pages/ExpenseHistory";
 import Reports from "@/pages/Reports";
 import Profile from "@/pages/Profile";
+import Chat from "@/pages/Chat";
 import NotFound from "@/pages/NotFound";
 import { useEffect } from "react";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/add-expense" element={<ProtectedRoute><AddExpense /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><ExpenseHistory /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

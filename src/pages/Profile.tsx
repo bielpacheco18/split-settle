@@ -5,16 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { User, LogOut, KeyRound, Bell, BellOff } from "lucide-react";
+import { User, LogOut, KeyRound, Bell, BellOff, Camera } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user, signOut } = useAuth();
-  const { data: profile, updateProfile } = useProfile();
+  const { data: profile, updateProfile, uploadAvatar } = useProfile();
   const { toast } = useToast();
 
   const { permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
@@ -57,6 +57,17 @@ export default function Profile() {
 
   const initials = (profile?.name || user?.email || "?").slice(0, 2).toUpperCase();
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    uploadAvatar.mutate(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Perfil</h1>
@@ -64,12 +75,32 @@ export default function Profile() {
       {/* Avatar + info */}
       <Card>
         <CardContent className="flex items-center gap-4 p-5">
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-          </Avatar>
+          <label className="relative cursor-pointer group">
+            <Avatar className="h-16 w-16">
+              {profile?.avatar_url && (
+                <AvatarImage src={profile.avatar_url} alt={profile.name ?? "avatar"} />
+              )}
+              <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+            </Avatar>
+            {/* Overlay com ícone de câmera */}
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              {uploadAvatar.isPending
+                ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <Camera className="h-5 w-5 text-white" />
+              }
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={uploadAvatar.isPending}
+            />
+          </label>
           <div>
             <p className="text-lg font-semibold">{profile?.name || "—"}</p>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque na foto para alterar</p>
           </div>
         </CardContent>
       </Card>

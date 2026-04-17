@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -139,6 +139,7 @@ export default function Friends() {
               <div key={f.friendshipId} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
+                    {f.avatar_url && <AvatarImage src={f.avatar_url} alt={f.name} />}
                     <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div>
@@ -171,6 +172,7 @@ export default function Friends() {
               <div key={f.friendshipId} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
+                    {f.avatar_url && <AvatarImage src={f.avatar_url} alt={f.name} />}
                     <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div>

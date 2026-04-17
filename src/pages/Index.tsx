@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { PlusCircle, TrendingUp, TrendingDown, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, AnimatedCard } from "@/components/PageTransition";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -176,6 +176,7 @@ export default function Index() {
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
+                      {friend?.avatar_url && <AvatarImage src={friend.avatar_url} alt={name} />}
                       <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                     </Avatar>
                     <div>

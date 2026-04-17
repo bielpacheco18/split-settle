@@ -12,8 +12,57 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Send, UsersRound } from "lucide-react";
+import { Search, UserPlus, Send, UsersRound, Camera, X, Sparkles } from "lucide-react";
 import { useGroupDetail } from "@/hooks/useGroups";
+
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string;
+const CATEGORIES = ["alimentação", "transporte", "moradia", "lazer", "saúde", "educação", "compras", "outros"];
+
+async function extractReceiptData(base64Image: string, mimeType: string) {
+  if (!GROQ_API_KEY) throw new Error("VITE_GROQ_API_KEY não configurada");
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.2-11b-vision-preview",
+      max_tokens: 256,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64Image}` },
+            },
+            {
+              type: "text",
+              text: `Analise este comprovante/nota fiscal e extraia as informações. Responda SOMENTE em JSON válido, sem markdown:
+{"description":"nome do estabelecimento ou produto principal","total_amount":0.00,"category":"uma de: alimentação/transporte/moradia/lazer/saúde/educação/compras/outros","expense_date":"YYYY-MM-DD ou null se não visível"}`,
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Groq Vision: ${await res.text()}`);
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? "";
+
+  // Extract JSON from response
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("IA não retornou JSON válido");
+  return JSON.parse(match[0]) as {
+    description: string;
+    total_amount: number;
+    category: string;
+    expense_date: string | null;
+  };
+}
 
 function sendInvite(toEmail: string, fromEmail: string) {
   const appUrl = window.location.origin;
@@ -24,10 +73,6 @@ function sendInvite(toEmail: string, fromEmail: string) {
     window.open(`mailto:${toEmail}?subject=${encodeURIComponent("Convite para o SplitEasy")}&body=${encodeURIComponent(text)}`, "_blank");
   }
 }
-
-const CATEGORIES = [
-  "alimentação", "transporte", "moradia", "lazer", "saúde", "educação", "compras", "outros",
-];
 
 export default function AddExpense() {
   const { user } = useAuth();
@@ -50,6 +95,48 @@ export default function AddExpense() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+
+  const handleReceiptChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setReceiptPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    setReceiptFile(file);
+
+    // Extract with AI
+    setExtracting(true);
+    try {
+      const base64Reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        base64Reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          resolve(result.split(",")[1]);
+        };
+        base64Reader.onerror = reject;
+        base64Reader.readAsDataURL(file);
+      });
+
+      const extracted = await extractReceiptData(base64, file.type);
+
+      if (extracted.description) setDescription(extracted.description);
+      if (extracted.total_amount > 0) setTotalAmount(extracted.total_amount.toFixed(2));
+      if (extracted.category && CATEGORIES.includes(extracted.category)) setCategory(extracted.category);
+      if (extracted.expense_date) setExpenseDate(extracted.expense_date);
+
+      toast({ title: "Comprovante analisado!", description: "Campos preenchidos pela IA. Revise antes de salvar." });
+    } catch (err: any) {
+      toast({ title: "Não foi possível ler o comprovante", description: err.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   // Pre-select group members when coming from a group
   useEffect(() => {
@@ -154,10 +241,26 @@ export default function AddExpense() {
       return;
     }
 
-    createExpense.mutate(
-      { description: description.trim(), total_amount: total, category, expense_date: expenseDate, participants, group_id: groupId },
-      { onSuccess: () => groupId ? navigate(`/groups/${groupId}`) : navigate("/") }
-    );
+    // Upload receipt if present, then create expense
+    const doCreate = async (receiptUrl?: string) => {
+      createExpense.mutate(
+        { description: description.trim(), total_amount: total, category, expense_date: expenseDate, participants, group_id: groupId, receipt_url: receiptUrl },
+        { onSuccess: () => groupId ? navigate(`/groups/${groupId}`) : navigate("/") }
+      );
+    };
+
+    if (receiptFile && user) {
+      const ext = receiptFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      supabase.storage.from("receipts").upload(path, receiptFile, { upsert: false, contentType: receiptFile.type })
+        .then(({ error }) => {
+          if (error) { doCreate(); return; }
+          const { data } = supabase.storage.from("receipts").getPublicUrl(path);
+          doCreate(data.publicUrl);
+        });
+    } else {
+      doCreate();
+    }
   };
 
   const equalShare = participantCount > 0 ? (total / participantCount).toFixed(2) : "0.00";
@@ -172,6 +275,53 @@ export default function AddExpense() {
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Receipt scanner */}
+        <Card className="border-dashed">
+          <CardContent className="p-4">
+            {receiptPreview ? (
+              <div className="space-y-3">
+                <div className="relative">
+                  <img src={receiptPreview} alt="Comprovante" className="w-full max-h-48 object-contain rounded-lg border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => { setReceiptPreview(null); setReceiptFile(null); }}
+                    className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                {extracting && (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <Sparkles className="h-4 w-4 animate-pulse" />
+                    Analisando comprovante com IA...
+                  </div>
+                )}
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center gap-2 py-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  {extracting
+                    ? <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                    : <Camera className="h-5 w-5 text-primary" />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Escanear comprovante</p>
+                  <p className="text-xs text-muted-foreground">A IA preenche os campos automaticamente</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleReceiptChange}
+                  disabled={extracting}
+                />
+              </label>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle className="text-lg">Detalhes</CardTitle></CardHeader>
           <CardContent className="space-y-4">

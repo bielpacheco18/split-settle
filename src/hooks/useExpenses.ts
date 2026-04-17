@@ -39,6 +39,7 @@ export function useExpenses() {
       expense_date,
       participants,
       group_id,
+      receipt_url,
     }: {
       description: string;
       total_amount: number;
@@ -46,12 +47,13 @@ export function useExpenses() {
       expense_date: string;
       participants: ExpenseParticipant[];
       group_id?: string;
+      receipt_url?: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
 
       const { data: expense, error: expError } = await supabase
         .from("expenses")
-        .insert({ description, total_amount, category, expense_date, paid_by: user.id, ...(group_id ? { group_id } : {}) })
+        .insert({ description, total_amount, category, expense_date, paid_by: user.id, ...(group_id ? { group_id } : {}), ...(receipt_url ? { receipt_url } : {}) })
         .select()
         .single();
       if (expError) throw expError;

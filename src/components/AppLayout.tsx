@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFriends } from "@/hooks/useFriends";
-import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut, UserCircle, Bot, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Users, PlusCircle, History, BarChart3, LogOut, UserCircle, Bot, MoreHorizontal, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +24,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { to: "/", icon: LayoutDashboard, label: "Dashboard", badge: 0 },
     { to: "/friends", icon: Users, label: "Amigos", badge: pendingCount },
     { to: "/add-expense", icon: PlusCircle, label: "Despesa", badge: 0 },
+    { to: "/groups", icon: UsersRound, label: "Grupos", badge: 0 },
     { to: "/history", icon: History, label: "Histórico", badge: 0 },
     { to: "/reports", icon: BarChart3, label: "Relatórios", badge: 0 },
     { to: "/chat", icon: Bot, label: "IA", badge: 0 },
@@ -40,6 +41,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   // Items hidden in the "Mais" sheet
   const mobileMoreItems = [
+    { to: "/groups", icon: UsersRound, label: "Grupos", badge: 0 },
     { to: "/history", icon: History, label: "Histórico", badge: 0 },
     { to: "/reports", icon: BarChart3, label: "Relatórios", badge: 0 },
     { to: "/profile", icon: UserCircle, label: "Perfil", badge: 0 },

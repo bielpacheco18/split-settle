@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFriends } from "@/hooks/useFriends";
 import { useExpenses, ExpenseParticipant } from "@/hooks/useExpenses";
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Send } from "lucide-react";
+import { Search, UserPlus, Send, UsersRound } from "lucide-react";
+import { useGroupDetail } from "@/hooks/useGroups";
 
 function sendInvite(toEmail: string, fromEmail: string) {
   const appUrl = window.location.origin;
@@ -34,6 +35,9 @@ export default function AddExpense() {
   const { createExpense } = useExpenses();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const groupId = searchParams.get("group") ?? undefined;
+  const { membersQuery } = useGroupDetail(groupId);
 
   const [description, setDescription] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
@@ -46,6 +50,15 @@ export default function AddExpense() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+
+  // Pre-select group members when coming from a group
+  useEffect(() => {
+    if (!groupId || !membersQuery.data || !user) return;
+    const memberIds = membersQuery.data
+      .map((m) => m.user_id)
+      .filter((id) => id !== user.id);
+    setSelectedFriends(memberIds);
+  }, [groupId, membersQuery.data, user]);
 
   const handleEmailSearch = async () => {
     const email = emailSearch.trim().toLowerCase();
@@ -142,8 +155,8 @@ export default function AddExpense() {
     }
 
     createExpense.mutate(
-      { description: description.trim(), total_amount: total, category, expense_date: expenseDate, participants },
-      { onSuccess: () => navigate("/") }
+      { description: description.trim(), total_amount: total, category, expense_date: expenseDate, participants, group_id: groupId },
+      { onSuccess: () => groupId ? navigate(`/groups/${groupId}`) : navigate("/") }
     );
   };
 
@@ -152,6 +165,12 @@ export default function AddExpense() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Nova despesa</h1>
+      {groupId && (
+        <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+          <UsersRound className="h-4 w-4 shrink-0" />
+          Despesa do grupo — membros pré-selecionados
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader><CardTitle className="text-lg">Detalhes</CardTitle></CardHeader>

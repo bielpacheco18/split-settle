@@ -145,7 +145,7 @@ export default function Profile() {
       </Card>
 
       {/* Push notifications */}
-      {permission !== "unsupported" && (
+      {permission !== "unsupported" && import.meta.env.VITE_VAPID_PUBLIC_KEY && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">

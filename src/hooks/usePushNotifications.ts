@@ -27,14 +27,25 @@ export function usePushNotifications() {
   }, []);
 
   const subscribe = useCallback(async () => {
-    if (!user || !VAPID_PUBLIC_KEY) return false;
+    if (!user) return false;
+    if (!VAPID_PUBLIC_KEY) {
+      console.warn("VITE_VAPID_PUBLIC_KEY não configurada");
+      return false;
+    }
     setLoading(true);
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm as PushPermission);
       if (perm !== "granted") return false;
 
-      const reg = await navigator.serviceWorker.ready;
+      // Timeout para serviceWorker.ready (evita travar em dev mode)
+      const swReady = Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Service worker não disponível. Acesse pelo app instalado.")), 6000)
+        ),
+      ]);
+      const reg = await swReady;
       const existing = await reg.pushManager.getSubscription();
       if (existing) await existing.unsubscribe();
 
@@ -53,8 +64,9 @@ export function usePushNotifications() {
 
       if (error) throw error;
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Push subscribe error:", err);
+      alert(err?.message ?? "Erro ao ativar notificações.");
       return false;
     } finally {
       setLoading(false);
@@ -65,7 +77,10 @@ export function usePushNotifications() {
     if (!user) return;
     setLoading(true);
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 6000)),
+      ]);
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await sub.unsubscribe();

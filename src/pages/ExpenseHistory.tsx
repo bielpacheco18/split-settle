@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useExpenses, useBalances } from "@/hooks/useExpenses";
 import { useSettlements } from "@/hooks/useSettlements";
+import { useReactions } from "@/hooks/useReactions";
 import { useAuth } from "@/contexts/AuthContext";
+import ExpenseReactions from "@/components/ExpenseReactions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,9 @@ export default function ExpenseHistory() {
   const { settlementsQuery, deleteSettlement } = useSettlements();
   const expenses = expensesQuery.data ?? [];
   const settlements = settlementsQuery.data ?? [];
+
+  const expenseIds = expenses.map((e: any) => e.id);
+  const { byExpense, toggleReaction } = useReactions(expenseIds);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -278,6 +283,12 @@ export default function ExpenseHistory() {
                         ))}
                       </div>
                     )}
+                    <ExpenseReactions
+                      expenseId={exp.id}
+                      reactions={byExpense[exp.id] ?? {}}
+                      onToggle={(expenseId, emoji) => toggleReaction.mutate({ expenseId, emoji })}
+                      disabled={toggleReaction.isPending}
+                    />
                   </CardContent>
                 </Card>
               );

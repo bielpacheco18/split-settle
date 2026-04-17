@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { User, LogOut, KeyRound } from "lucide-react";
+import { User, LogOut, KeyRound, Bell, BellOff } from "lucide-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,7 @@ export default function Profile() {
   const { data: profile, updateProfile } = useProfile();
   const { toast } = useToast();
 
+  const { permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [name, setName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -141,6 +143,39 @@ export default function Profile() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Push notifications */}
+      {permission !== "unsupported" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Bell className="h-5 w-5" /> Notificações
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {permission === "granted"
+                ? "Notificações ativas. Você será avisado quando alguém adicionar uma despesa com você ou fizer um pagamento."
+                : permission === "denied"
+                ? "Notificações bloqueadas pelo navegador. Habilite nas configurações do navegador."
+                : "Ative para ser avisado sobre novas despesas e pagamentos."}
+            </p>
+            {permission !== "denied" && (
+              permission === "granted" ? (
+                <Button variant="outline" onClick={unsubscribe} disabled={pushLoading} className="gap-2">
+                  <BellOff className="h-4 w-4" />
+                  {pushLoading ? "Desativando..." : "Desativar notificações"}
+                </Button>
+              ) : (
+                <Button onClick={subscribe} disabled={pushLoading} className="gap-2">
+                  <Bell className="h-4 w-4" />
+                  {pushLoading ? "Ativando..." : "Ativar notificações"}
+                </Button>
+              )
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 

@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { notifyExpenseParticipants } from "@/hooks/usePushNotifications";
+import { useProfile } from "@/hooks/useProfile";
 
 export interface ExpenseParticipant {
   user_id: string;
@@ -13,6 +15,7 @@ export function useExpenses() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: profile } = useProfile();
 
   const expensesQuery = useQuery({
     queryKey: ["expenses", user?.id],
@@ -61,6 +64,12 @@ export function useExpenses() {
       }));
       const { error: partError } = await supabase.from("expense_participants").insert(participantRows);
       if (partError) throw partError;
+
+      // Notify other participants (fire and forget)
+      const otherIds = participants.filter((p) => p.user_id !== user.id).map((p) => p.user_id);
+      if (otherIds.length > 0) {
+        notifyExpenseParticipants(otherIds, description, profile?.name ?? "Alguém", total_amount);
+      }
 
       return expense;
     },

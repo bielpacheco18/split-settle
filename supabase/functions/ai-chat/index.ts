@@ -194,8 +194,20 @@ async function handleReceipt(image: string, mimeType: string) {
           { type: "image_url", image_url: { url: `data:${mimeType};base64,${image}` } },
           {
             type: "text",
-            text: `Analise este comprovante/nota fiscal e extraia as informações. Responda SOMENTE em JSON válido, sem markdown:
-{"description":"nome do estabelecimento ou produto principal","total_amount":0.00,"category":"uma de: ${CATEGORIES.join("/")}","expense_date":"YYYY-MM-DD ou null se não visível"}`,
+            text: `Analise esta imagem de um comprovante, nota fiscal ou boleto bancário e extraia as informações.
+
+Se for um BOLETO BANCÁRIO:
+- "total_amount" é o "Valor do Documento" ou "(=) Valor Cobrado" (o valor a pagar), NUNCA um número do código de barras, da linha digitável, do "Nosso Número" ou do "Número do Documento" — esses são identificadores, não valores em reais.
+- "expense_date" é a "Data de Vencimento", não a data de emissão/processamento.
+- "description" é o nome do beneficiário/cedente (quem está cobrando), não o do pagador/sacado.
+
+Se for um comprovante ou nota fiscal comum:
+- "description" é o nome do estabelecimento ou produto principal.
+- "total_amount" é o valor total pago.
+- "expense_date" é a data da compra.
+
+Responda SOMENTE em JSON válido, sem markdown, sem comentários:
+{"description":"string","total_amount":0.00,"category":"uma de: ${CATEGORIES.join("/")}","expense_date":"YYYY-MM-DD ou null se não visível"}`,
           },
         ],
       },

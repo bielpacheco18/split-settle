@@ -1,7 +1,9 @@
 // Prepara o arquivo do comprovante para o modelo de visão, que só aceita imagem.
 // PDFs (boletos, notas em PDF) e fotos HEIC/HEIF (padrão do iPhone) são convertidos para JPEG.
 
-const MAX_DIMENSION = 1600; // suficiente para leitura de texto, mantém o payload pequeno
+// Boletos e notas fiscais têm texto pequeno e denso (linha digitável, tabelas de valores);
+// uma resolução baixa faz a IA confundir dígitos de código de barras com o valor a pagar.
+const MAX_DIMENSION = 2200;
 
 export interface PreparedImage {
   base64: string;
@@ -46,7 +48,7 @@ async function renderPdfFirstPage(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const pdf = await getDocument({ data: buffer }).promise;
   const page = await pdf.getPage(1);
-  const scale = Math.min(2, MAX_DIMENSION / Math.max(page.getViewport({ scale: 1 }).width, 1));
+  const scale = Math.min(3, MAX_DIMENSION / Math.max(page.getViewport({ scale: 1 }).width, 1));
   const viewport = page.getViewport({ scale });
 
   const canvas = document.createElement("canvas");

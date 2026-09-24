@@ -4,12 +4,15 @@ import { useFriends } from "@/hooks/useFriends";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { BarChart3, PieChart as PieChartIcon, Users, FileDown } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { BarChart3, PieChart as PieChartIcon, Users, FileDown, TrendingUp, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ExpensePoint, categoryDeviations, detectAnomalies, forecastMonth } from "@/lib/analytics";
 
 const COLORS = [
   "hsl(160,84%,39%)", "hsl(38,92%,50%)", "hsl(0,72%,51%)", "hsl(220,70%,55%)",
@@ -31,6 +34,7 @@ export default function Reports() {
   const { acceptedFriends } = useFriends();
   const { data: profile } = useProfile();
   const { settlementsQuery } = useSettlements();
+  const isMobile = useIsMobile();
   const expenses = expensesQuery.data ?? [];
   const settlements = settlementsQuery.data ?? [];
 
@@ -48,6 +52,18 @@ export default function Reports() {
   const monthlyData = Object.entries(monthlyTotals)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, total]) => ({ month, total }));
+
+  const points: ExpensePoint[] = expenses.map((e: any) => ({
+    id: e.id,
+    description: e.description,
+    category: e.category,
+    amount: Number(e.total_amount),
+    date: e.expense_date,
+  }));
+  const forecast = forecastMonth(points);
+  const anomalies = detectAnomalies(points).slice(0, 5);
+  const deviations = categoryDeviations(points);
+  const brl = (v: number) => `R$ ${v.toFixed(2)}`;
 
   const totalExpenses = expenses.reduce((s: number, e: any) => s + Number(e.total_amount), 0);
   const friendMap = Object.fromEntries(acceptedFriends.map((f: any) => [f.id, f]));
@@ -243,7 +259,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Relatórios</h1>
         <Button
           variant="outline"
@@ -266,6 +282,55 @@ export default function Reports() {
       </Card>
 
       <Card>
+        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Insights</CardTitle></CardHeader>
+        <CardContent className="space-y-5">
+          {expenses.length === 0 ? (
+            <EmptyState icon={TrendingUp} text="Registre despesas para ver previsões e alertas." />
+          ) : (
+            <>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Previsão para este mês</p>
+                <p className="text-3xl font-bold">{brl(forecast.forecast)}</p>
+                {forecast.high > forecast.low + 0.01 && (
+                  <p className="text-sm text-muted-foreground">
+                    Faixa provável: {brl(forecast.low)} a {brl(forecast.high)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Gasto até agora: {brl(forecast.spentSoFar)} (dia {forecast.daysElapsed} de {forecast.daysInMonth}).{" "}
+                  {forecast.trend === null
+                    ? "Baseado só no ritmo deste mês — o histórico ainda é curto."
+                    : `Combina o ritmo deste mês com a tendência de ${forecast.historyMonths} meses anteriores${forecast.r2 !== null ? ` (R² ${forecast.r2.toFixed(2)})` : ""}.`}
+                </p>
+              </div>
+
+              {(deviations.length > 0 || anomalies.length > 0) ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning" /> Fora do padrão
+                  </p>
+                  {deviations.map((d) => (
+                    <div key={d.category} className="rounded-lg border border-border p-3 text-sm">
+                      <span className="font-medium capitalize">{d.category}</span>: {brl(d.current)} neste mês,
+                      acima da média mensal de {brl(d.mean)}.
+                    </div>
+                  ))}
+                  {anomalies.map((a) => (
+                    <div key={a.expense.id} className="rounded-lg border border-border p-3 text-sm">
+                      <span className="font-medium">{a.expense.description}</span> ({brl(a.expense.amount)}) — bem acima
+                      do seu gasto típico em <span className="capitalize">{a.expense.category}</span> ({brl(a.median)}).
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum gasto fora do seu padrão.</p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle className="text-lg">Por categoria</CardTitle></CardHeader>
         <CardContent>
           {categoryData.length === 0 ? (
@@ -274,10 +339,11 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  label={isMobile ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                   {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
+                {isMobile && <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />}
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -293,7 +359,7 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={monthlyData}>
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} width={isMobile ? 40 : 60} />
                 <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
                 <Bar dataKey="total" fill="hsl(160,84%,39%)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -311,9 +377,9 @@ export default function Reports() {
             balanceEntries.map(([id, bal]) => {
               const name = friendMap[id]?.name || "Usuário";
               return (
-                <div key={id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <span className="font-medium">{name}</span>
-                  <span className={bal > 0 ? "font-semibold text-success" : "font-semibold text-destructive"}>
+                <div key={id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                  <span className="min-w-0 truncate font-medium">{name}</span>
+                  <span className={cn("shrink-0 font-semibold", bal > 0 ? "text-success" : "text-destructive")}>
                     {bal > 0 ? "+" : ""}R$ {(bal as number).toFixed(2)}
                   </span>
                 </div>

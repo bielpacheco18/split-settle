@@ -136,15 +136,15 @@ export default function Friends() {
           </CardHeader>
           <CardContent className="space-y-2">
             {pendingReceived.map((f: any) => (
-              <div key={f.friendshipId} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-3">
+              <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Avatar className="h-9 w-9">
                     {f.avatar_url && <AvatarImage src={f.avatar_url} alt={f.name} />}
                     <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <span className="font-medium">{f.name || "Usuário"}</span>
-                    {f.email && <p className="text-xs text-muted-foreground">{f.email}</p>}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{f.name || "Usuário"}</p>
+                    {f.email && <p className="truncate text-xs text-muted-foreground">{f.email}</p>}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -169,15 +169,15 @@ export default function Friends() {
           </CardHeader>
           <CardContent className="space-y-2">
             {pendingSent.map((f: any) => (
-              <div key={f.friendshipId} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-3">
+              <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Avatar className="h-9 w-9">
                     {f.avatar_url && <AvatarImage src={f.avatar_url} alt={f.name} />}
                     <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <span className="font-medium">{f.name || "Usuário"}</span>
-                    {f.email && <p className="text-xs text-muted-foreground">{f.email}</p>}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{f.name || "Usuário"}</p>
+                    {f.email && <p className="truncate text-xs text-muted-foreground">{f.email}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -202,14 +202,14 @@ export default function Friends() {
             <p className="text-sm text-muted-foreground">Nenhum amigo ainda. Busque pelo email!</p>
           )}
           {acceptedFriends.map((f: any) => (
-            <div key={f.friendshipId} className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div className="flex items-center gap-3">
+            <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className="text-xs">{(f.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <span className="font-medium">{f.name || "Usuário"}</span>
-                  {f.email && <p className="text-xs text-muted-foreground">{f.email}</p>}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{f.name || "Usuário"}</p>
+                  {f.email && <p className="truncate text-xs text-muted-foreground">{f.email}</p>}
                 </div>
               </div>
               <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setRemoveTarget({ friendshipId: f.friendshipId, name: f.name || "Usuário" })}>

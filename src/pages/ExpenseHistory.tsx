@@ -313,16 +313,16 @@ export default function ExpenseHistory() {
 
             return (
               <Card key={s.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
+                <CardContent className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isPayer ? "bg-destructive/15" : "bg-success/15"}`}>
                       {isPayer
                         ? <ArrowUpRight className="h-4 w-4 text-destructive" />
                         : <ArrowDownLeft className="h-4 w-4 text-success" />
                       }
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-sm">
                         {isPayer ? `Você pagou ${otherName}` : `${otherName} te pagou`}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -330,7 +330,7 @@ export default function ExpenseHistory() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-3">
                     <span className={`font-semibold ${isPayer ? "text-destructive" : "text-success"}`}>
                       {isPayer ? "-" : "+"}R$ {Number(s.amount).toFixed(2)}
                     </span>

@@ -172,21 +172,21 @@ export default function Index() {
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + i * 0.06, duration: 0.25 }}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border p-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Avatar className="h-9 w-9">
                       {friend?.avatar_url && <AvatarImage src={friend.avatar_url} alt={name} />}
                       <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <span className="font-medium">{name}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{name}</p>
                       <p className="text-xs text-muted-foreground">
                         {balance > 0 ? "te deve" : "você deve"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <span className={balance > 0 ? "font-semibold text-success" : "font-semibold text-destructive"}>
                       R$ {absBalance.toFixed(2)}
                     </span>

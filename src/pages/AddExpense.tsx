@@ -28,8 +28,8 @@ async function extractReceiptData(base64Image: string, mimeType: string) {
       Authorization: `Bearer ${GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
-      max_tokens: 256,
+      model: "qwen/qwen3.8-27b",
+      max_tokens: 1024,
       messages: [
         {
           role: "user",
@@ -51,7 +51,8 @@ async function extractReceiptData(base64Image: string, mimeType: string) {
 
   if (!res.ok) throw new Error(`Groq Vision: ${await res.text()}`);
   const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? "";
+  // Remove o bloco de raciocínio que alguns modelos emitem antes da resposta
+  const text = (data.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "");
 
   // Extract JSON from response
   const match = text.match(/\{[\s\S]*\}/);

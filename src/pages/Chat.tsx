@@ -47,7 +47,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-3rem)]">
+    <div className="flex flex-col h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-3rem)]">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function Chat() {
               {/* Bubble */}
               <div
                 className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
+                  "max-w-[80%] break-words rounded-2xl px-4 py-2.5 text-sm",
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : "bg-card border border-border text-foreground rounded-tl-sm"

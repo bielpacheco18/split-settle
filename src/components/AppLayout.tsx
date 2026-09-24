@@ -92,7 +92,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </aside>
       )}
 
-      <main className={cn("flex-1", isMobile ? "pb-20" : "")}>
+      <main className={cn("min-w-0 flex-1", isMobile ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : "")}>
         <div className="mx-auto max-w-4xl p-4 md:p-6">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
@@ -104,7 +104,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {isMobile && (
         <>
-          <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 py-2">
+          <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             {mobileMainItems.map(({ to, icon: Icon, label, badge }) => (
               <Link
                 key={to}

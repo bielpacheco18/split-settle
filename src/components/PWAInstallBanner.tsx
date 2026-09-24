@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { X, Share, Plus } from "lucide-react";
 
+// Evento não padronizado do Chrome/Android para instalar o PWA
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 function useIOSInstallPrompt() {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isInStandaloneMode =
-    ("standalone" in navigator && (navigator as any).standalone === true) ||
+    ("standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true) ||
     window.matchMedia("(display-mode: standalone)").matches;
   const isSafari =
     /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
@@ -13,18 +19,18 @@ function useIOSInstallPrompt() {
 }
 
 function useAndroidInstallPrompt() {
-  const [prompt, setPrompt] = useState<Event | null>(null);
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
-      setPrompt(e);
+      setPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  return prompt as any;
+  return prompt;
 }
 
 const DISMISSED_KEY = "pwa-banner-dismissed";

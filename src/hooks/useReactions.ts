@@ -24,7 +24,7 @@ export function useReactions(expenseIds: string[]) {
     enabled: expenseIds.length > 0 && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("expense_reactions" as any)
+        .from("expense_reactions")
         .select("id, expense_id, user_id, emoji, profiles(name)")
         .in("expense_id", expenseIds);
       if (error) throw error;
@@ -39,7 +39,7 @@ export function useReactions(expenseIds: string[]) {
     if (!byExpense[r.expense_id][r.emoji]) byExpense[r.expense_id][r.emoji] = [];
     byExpense[r.expense_id][r.emoji].push({
       user_id: r.user_id,
-      name: (r.profiles as any)?.name ?? "Usuário",
+      name: r.profiles?.name ?? "Usuário",
     });
   }
 
@@ -53,13 +53,13 @@ export function useReactions(expenseIds: string[]) {
 
       if (existing) {
         const { error } = await supabase
-          .from("expense_reactions" as any)
+          .from("expense_reactions")
           .delete()
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("expense_reactions" as any)
+          .from("expense_reactions")
           .insert({ expense_id: expenseId, user_id: user.id, emoji });
         if (error) throw error;
       }

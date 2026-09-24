@@ -14,56 +14,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Search, UserPlus, Send, UsersRound, Camera, X, Sparkles } from "lucide-react";
 import { useGroupDetail } from "@/hooks/useGroups";
+import { extractReceiptData } from "@/lib/ai";
+import { prepareReceiptImage } from "@/lib/receiptImage";
+import { errorMessage } from "@/lib/utils";
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string;
 const CATEGORIES = ["alimentação", "transporte", "moradia", "lazer", "saúde", "educação", "compras", "outros"];
-
-async function extractReceiptData(base64Image: string, mimeType: string) {
-  if (!GROQ_API_KEY) throw new Error("VITE_GROQ_API_KEY não configurada");
-
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "qwen/qwen3.8-27b",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${base64Image}` },
-            },
-            {
-              type: "text",
-              text: `Analise este comprovante/nota fiscal e extraia as informações. Responda SOMENTE em JSON válido, sem markdown:
-{"description":"nome do estabelecimento ou produto principal","total_amount":0.00,"category":"uma de: alimentação/transporte/moradia/lazer/saúde/educação/compras/outros","expense_date":"YYYY-MM-DD ou null se não visível"}`,
-            },
-          ],
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Groq Vision: ${await res.text()}`);
-  const data = await res.json();
-  // Remove o bloco de raciocínio que alguns modelos emitem antes da resposta
-  const text = (data.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "");
-
-  // Extract JSON from response
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("IA não retornou JSON válido");
-  return JSON.parse(match[0]) as {
-    description: string;
-    total_amount: number;
-    category: string;
-    expense_date: string | null;
-  };
-}
 
 function sendInvite(toEmail: string, fromEmail: string) {
   const appUrl = window.location.origin;
@@ -105,35 +60,24 @@ export default function AddExpense() {
     if (!file) return;
     e.target.value = "";
 
-    // Preview
-    const reader = new FileReader();
-    reader.onload = (ev) => setReceiptPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
     setReceiptFile(file);
-
-    // Extract with AI
     setExtracting(true);
     try {
-      const base64Reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        base64Reader.onload = (ev) => {
-          const result = ev.target?.result as string;
-          resolve(result.split(",")[1]);
-        };
-        base64Reader.onerror = reject;
-        base64Reader.readAsDataURL(file);
-      });
+      // PDFs (boletos, notas em PDF) e fotos HEIC do iPhone não são lidos direto pelo
+      // modelo de visão nem exibidos pelo <img>; convertemos tudo para JPEG antes.
+      const { base64, mimeType, previewUrl } = await prepareReceiptImage(file);
+      setReceiptPreview(previewUrl);
 
-      const extracted = await extractReceiptData(base64, file.type);
+      const extracted = await extractReceiptData(base64, mimeType);
 
       if (extracted.description) setDescription(extracted.description);
-      if (extracted.total_amount > 0) setTotalAmount(extracted.total_amount.toFixed(2));
+      if (extracted.total_amount) setTotalAmount(extracted.total_amount.toFixed(2));
       if (extracted.category && CATEGORIES.includes(extracted.category)) setCategory(extracted.category);
       if (extracted.expense_date) setExpenseDate(extracted.expense_date);
 
       toast({ title: "Comprovante analisado!", description: "Campos preenchidos pela IA. Revise antes de salvar." });
-    } catch (err: any) {
-      toast({ title: "Não foi possível ler o comprovante", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Não foi possível ler o comprovante", description: errorMessage(err), variant: "destructive" });
     } finally {
       setExtracting(false);
     }
@@ -173,7 +117,7 @@ export default function AddExpense() {
         return;
       }
       // Check if already a friend
-      const isFriend = acceptedFriends.some((f: any) => f.id === data.id);
+      const isFriend = acceptedFriends.some((f) => f.id === data.id);
       if (isFriend) {
         setSelectedFriends((prev) => [...prev, data.id]);
       } else {
@@ -193,7 +137,7 @@ export default function AddExpense() {
       }
       setEmailSearch("");
       toast({ title: `${data.name || "Usuário"} adicionado!` });
-    } catch (err: any) {
+    } catch (err) {
       // If table doesn't exist or RLS error, still show invite option
       setNotFoundEmail(email);
     } finally {
@@ -312,7 +256,7 @@ export default function AddExpense() {
                 </div>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,application/pdf"
                   capture="environment"
                   className="hidden"
                   onChange={handleReceiptChange}
@@ -397,7 +341,7 @@ export default function AddExpense() {
               <p className="text-sm text-muted-foreground">Busque por email ou adicione amigos para dividir despesas.</p>
             ) : (
               <>
-                {acceptedFriends.map((f: any) => (
+                {acceptedFriends.map((f) => (
                   <label key={f.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-accent/50">
                     <Checkbox
                       checked={selectedFriends.includes(f.id)}
@@ -414,7 +358,7 @@ export default function AddExpense() {
                   </label>
                 ))}
                 {invitedUsers
-                  .filter((u) => !acceptedFriends.some((f: any) => f.id === u.id))
+                  .filter((u) => !acceptedFriends.some((f) => f.id === u.id))
                   .map((u) => (
                     <label key={u.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 transition-colors hover:bg-accent/50">
                       <Checkbox
@@ -443,7 +387,7 @@ export default function AddExpense() {
           <Card>
             <CardHeader><CardTitle className="text-lg">Divisão</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <Select value={splitType} onValueChange={(v) => setSplitType(v as any)}>
+              <Select value={splitType} onValueChange={(v) => setSplitType(v as typeof splitType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="equal">Igual</SelectItem>
@@ -455,7 +399,7 @@ export default function AddExpense() {
               <div className="space-y-2">
                 {allParticipantIds.map((id) => {
                   const isMe = id === user!.id;
-                  const friend = acceptedFriends.find((f: any) => f.id === id);
+                  const friend = acceptedFriends.find((f) => f.id === id);
                   const invited = invitedUsers.find((u) => u.id === id);
                   const name = isMe ? "Você" : friend?.name || invited?.name || "Usuário";
                   return (

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { errorMessage } from "@/lib/utils";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 
@@ -55,18 +56,18 @@ export function usePushNotifications() {
       });
 
       const json = subscription.toJSON();
-      const { error } = await supabase.from("push_subscriptions" as any).upsert({
+      const { error } = await supabase.from("push_subscriptions").upsert({
         user_id: user.id,
         endpoint: json.endpoint!,
-        p256dh: (json.keys as any).p256dh,
-        auth: (json.keys as any).auth,
+        p256dh: json.keys!.p256dh,
+        auth: json.keys!.auth,
       }, { onConflict: "user_id,endpoint" });
 
       if (error) throw error;
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Push subscribe error:", err);
-      alert(err?.message ?? "Erro ao ativar notificações.");
+      alert(errorMessage(err, "Erro ao ativar notificações."));
       return false;
     } finally {
       setLoading(false);
@@ -84,7 +85,7 @@ export function usePushNotifications() {
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await sub.unsubscribe();
-        await supabase.from("push_subscriptions" as any)
+        await supabase.from("push_subscriptions")
           .delete()
           .eq("user_id", user.id)
           .eq("endpoint", sub.endpoint);

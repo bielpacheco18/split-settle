@@ -14,6 +14,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExpensePoint, categoryDeviations, detectAnomalies, forecastMonth } from "@/lib/analytics";
 
+// O jspdf-autotable grava a posição final da última tabela no próprio documento
+const lastTableY = (doc: jsPDF) => (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+
 const COLORS = [
   "hsl(160,84%,39%)", "hsl(38,92%,50%)", "hsl(0,72%,51%)", "hsl(220,70%,55%)",
   "hsl(280,60%,55%)", "hsl(30,80%,50%)", "hsl(190,80%,45%)", "hsl(100,60%,40%)",
@@ -39,13 +42,13 @@ export default function Reports() {
   const settlements = settlementsQuery.data ?? [];
 
   const categoryTotals: Record<string, number> = {};
-  expenses.forEach((exp: any) => {
+  expenses.forEach((exp) => {
     categoryTotals[exp.category] = (categoryTotals[exp.category] ?? 0) + Number(exp.total_amount);
   });
   const categoryData = Object.entries(categoryTotals).map(([name, value]) => ({ name, value }));
 
   const monthlyTotals: Record<string, number> = {};
-  expenses.forEach((exp: any) => {
+  expenses.forEach((exp) => {
     const month = exp.expense_date.slice(0, 7);
     monthlyTotals[month] = (monthlyTotals[month] ?? 0) + Number(exp.total_amount);
   });
@@ -53,7 +56,7 @@ export default function Reports() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, total]) => ({ month, total }));
 
-  const points: ExpensePoint[] = expenses.map((e: any) => ({
+  const points: ExpensePoint[] = expenses.map((e) => ({
     id: e.id,
     description: e.description,
     category: e.category,
@@ -65,8 +68,8 @@ export default function Reports() {
   const deviations = categoryDeviations(points);
   const brl = (v: number) => `R$ ${v.toFixed(2)}`;
 
-  const totalExpenses = expenses.reduce((s: number, e: any) => s + Number(e.total_amount), 0);
-  const friendMap = Object.fromEntries(acceptedFriends.map((f: any) => [f.id, f]));
+  const totalExpenses = expenses.reduce((s, e) => s + Number(e.total_amount), 0);
+  const friendMap = Object.fromEntries(acceptedFriends.map((f) => [f.id, f]));
   const balanceEntries = Object.entries(balances ?? {});
 
   const handleExportPDF = () => {
@@ -108,7 +111,7 @@ export default function Reports() {
       headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
       styles: { fontSize: 10 },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = lastTableY(doc) + 10;
 
     // ── Saldos com amigos ──
     if (balanceEntries.length > 0) {
@@ -140,7 +143,7 @@ export default function Reports() {
           }
         },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = lastTableY(doc) + 10;
     }
 
     // ── Gastos por categoria ──
@@ -166,7 +169,7 @@ export default function Reports() {
         headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
         styles: { fontSize: 10 },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = lastTableY(doc) + 10;
     }
 
     // ── Gastos mensais ──
@@ -186,7 +189,7 @@ export default function Reports() {
         headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
         styles: { fontSize: 10 },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = lastTableY(doc) + 10;
     }
 
     // ── Despesas detalhadas ──
@@ -201,7 +204,7 @@ export default function Reports() {
       autoTable(doc, {
         startY: y,
         head: [["Data", "Descrição", "Categoria", "Total"]],
-        body: expenses.map((exp: any) => [
+        body: expenses.map((exp) => [
           format(new Date(exp.expense_date), "dd/MM/yyyy"),
           exp.description,
           exp.category.charAt(0).toUpperCase() + exp.category.slice(1),
@@ -212,7 +215,7 @@ export default function Reports() {
         styles: { fontSize: 9 },
         columnStyles: { 3: { halign: "right" } },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = lastTableY(doc) + 10;
     }
 
     // ── Pagamentos ──
@@ -227,7 +230,7 @@ export default function Reports() {
       autoTable(doc, {
         startY: y,
         head: [["Data", "De", "Para", "Valor"]],
-        body: settlements.map((s: any) => [
+        body: settlements.map((s) => [
           format(new Date(s.settled_at), "dd/MM/yyyy"),
           s.from_profile?.name || "Usuário",
           s.to_profile?.name || "Usuário",
@@ -241,7 +244,7 @@ export default function Reports() {
     }
 
     // ── Footer em todas as páginas ──
-    const totalPages = (doc as any).internal.getNumberOfPages();
+    const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);

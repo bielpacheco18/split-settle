@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, ChevronRight, Trash2 } from "lucide-react";
 import { StaggerContainer, StaggerItem } from "@/components/PageTransition";
+import { errorMessage } from "@/lib/utils";
 
 export default function Groups() {
   const { user } = useAuth();
@@ -34,8 +35,8 @@ export default function Groups() {
       toast({ title: `Grupo "${name}" criado!` });
       setSheetOpen(false);
       setName(""); setDescription(""); setSelectedMembers([]);
-    } catch (err: any) {
-      toast({ title: "Erro ao criar grupo", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao criar grupo", description: errorMessage(err), variant: "destructive" });
     }
   };
 
@@ -44,8 +45,8 @@ export default function Groups() {
     try {
       await deleteGroup.mutateAsync(groupId);
       toast({ title: "Grupo excluído" });
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro", description: errorMessage(err), variant: "destructive" });
     }
   };
 
@@ -162,7 +163,7 @@ export default function Groups() {
                 <p className="text-sm text-muted-foreground">Adicione amigos primeiro para criar um grupo.</p>
               ) : (
                 <div className="space-y-2">
-                  {acceptedFriends.map((f: any) => (
+                  {acceptedFriends.map((f) => (
                     <label
                       key={f.id}
                       className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-accent/50"

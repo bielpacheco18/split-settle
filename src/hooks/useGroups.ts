@@ -44,14 +44,14 @@ export function useGroups() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("groups" as any)
+        .from("groups")
         .select(`
           id, name, description, created_by, created_at,
           group_members(count)
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((g: any) => ({
+      return (data ?? []).map((g) => ({
         ...g,
         member_count: g.group_members?.[0]?.count ?? 0,
       })) as Group[];
@@ -63,7 +63,7 @@ export function useGroups() {
       if (!user) throw new Error("Não autenticado");
 
       const { data: group, error: gErr } = await supabase
-        .from("groups" as any)
+        .from("groups")
         .insert({ name, description: description || null, created_by: user.id })
         .select()
         .single();
@@ -72,18 +72,18 @@ export function useGroups() {
       // Add creator + selected members
       const allMembers = Array.from(new Set([user.id, ...memberIds]));
       const { error: mErr } = await supabase
-        .from("group_members" as any)
-        .insert(allMembers.map((uid) => ({ group_id: (group as any).id, user_id: uid })));
+        .from("group_members")
+        .insert(allMembers.map((uid) => ({ group_id: group.id, user_id: uid })));
       if (mErr) throw mErr;
 
-      return group as any as Group;
+      return { ...group, member_count: allMembers.length } as Group;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
   });
 
   const deleteGroup = useMutation({
     mutationFn: async (groupId: string) => {
-      const { error } = await supabase.from("groups" as any).delete().eq("id", groupId);
+      const { error } = await supabase.from("groups").delete().eq("id", groupId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
@@ -101,7 +101,7 @@ export function useGroupDetail(groupId: string | undefined) {
     enabled: !!groupId && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("group_members" as any)
+        .from("group_members")
         .select("id, group_id, user_id, joined_at, profiles(id, name, email)")
         .eq("group_id", groupId!);
       if (error) throw error;
@@ -129,7 +129,7 @@ export function useGroupDetail(groupId: string | undefined) {
   const addMember = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
-        .from("group_members" as any)
+        .from("group_members")
         .insert({ group_id: groupId, user_id: userId });
       if (error) throw error;
     },
@@ -139,7 +139,7 @@ export function useGroupDetail(groupId: string | undefined) {
   const removeMember = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
-        .from("group_members" as any)
+        .from("group_members")
         .delete()
         .eq("group_id", groupId!)
         .eq("user_id", userId);

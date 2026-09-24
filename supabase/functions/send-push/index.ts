@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
     const payload = JSON.stringify(notification);
     const results = await Promise.allSettled(
-      subs.map((sub: any) => sendWebPush(sub, payload, vapidPublicKey, vapidPrivateKey, vapidSubject))
+      subs.map((sub: { endpoint: string; p256dh: string; auth: string }) => sendWebPush(sub, payload, vapidPublicKey, vapidPrivateKey, vapidSubject))
     );
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
@@ -160,8 +160,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ sent, total: subs.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

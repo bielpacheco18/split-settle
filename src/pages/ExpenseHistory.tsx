@@ -27,6 +27,8 @@ const CATEGORIES = [
 ];
 
 type StatusFilter = "all" | "pending" | "partial" | "settled";
+type Expense = NonNullable<ReturnType<typeof useExpenses>["expensesQuery"]["data"]>[number];
+type Settlement = NonNullable<ReturnType<typeof useSettlements>["settlementsQuery"]["data"]>[number];
 
 export default function ExpenseHistory() {
   const { user } = useAuth();
@@ -36,7 +38,7 @@ export default function ExpenseHistory() {
   const expenses = expensesQuery.data ?? [];
   const settlements = settlementsQuery.data ?? [];
 
-  const expenseIds = expenses.map((e: any) => e.id);
+  const expenseIds = expenses.map((e) => e.id);
   const { byExpense, toggleReaction } = useReactions(expenseIds);
 
   // Filters
@@ -45,17 +47,17 @@ export default function ExpenseHistory() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Edit dialog
-  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDate, setEditDate] = useState("");
 
   // Delete confirms
-  const [deleteExpenseTarget, setDeleteExpenseTarget] = useState<any | null>(null);
-  const [deleteSettlementTarget, setDeleteSettlementTarget] = useState<any | null>(null);
+  const [deleteExpenseTarget, setDeleteExpenseTarget] = useState<Expense | null>(null);
+  const [deleteSettlementTarget, setDeleteSettlementTarget] = useState<Settlement | null>(null);
 
-  const openEdit = (exp: any) => {
+  const openEdit = (exp: Expense) => {
     setEditTarget(exp);
     setEditDescription(exp.description);
     setEditAmount(String(exp.total_amount));
@@ -77,23 +79,23 @@ export default function ExpenseHistory() {
     );
   };
 
-  const getExpenseStatus = (exp: any): "settled" | "partial" | "pending" => {
+  const getExpenseStatus = (exp: Expense): "settled" | "partial" | "pending" => {
     if (!user) return "pending";
     const isPayer = exp.paid_by === user.id;
     const participants = exp.expense_participants ?? [];
 
     if (isPayer) {
-      const others = participants.filter((p: any) => p.user_id !== user.id);
+      const others = participants.filter((p) => p.user_id !== user.id);
       if (others.length === 0) return "settled";
-      const totalOwedInExpense = others.reduce((s: number, p: any) => s + Number(p.amount_due), 0);
+      const totalOwedInExpense = others.reduce((s, p) => s + Number(p.amount_due), 0);
       if (totalOwedInExpense < 0.01) return "settled";
-      const allSettled = others.every((p: any) => ((balances ?? {})[p.user_id] ?? null) !== null && ((balances ?? {})[p.user_id] ?? 1) <= 0.01);
-      const anySettled = others.some((p: any) => ((balances ?? {})[p.user_id] ?? null) !== null && ((balances ?? {})[p.user_id] ?? 1) <= 0.01);
+      const allSettled = others.every((p) => ((balances ?? {})[p.user_id] ?? null) !== null && ((balances ?? {})[p.user_id] ?? 1) <= 0.01);
+      const anySettled = others.some((p) => ((balances ?? {})[p.user_id] ?? null) !== null && ((balances ?? {})[p.user_id] ?? 1) <= 0.01);
       if (allSettled) return "settled";
       if (anySettled) return "partial";
       return "pending";
     } else {
-      const myPart = participants.find((p: any) => p.user_id === user.id);
+      const myPart = participants.find((p) => p.user_id === user.id);
       if (!myPart) return "settled";
       const netBalance = (balances ?? {})[exp.paid_by] ?? null;
       if (netBalance === null) return "pending";
@@ -109,7 +111,7 @@ export default function ExpenseHistory() {
     pending: { label: "Pendente", icon: Clock, className: "bg-destructive/15 text-destructive border-destructive/30" },
   };
 
-  const filteredExpenses = expenses.filter((exp: any) => {
+  const filteredExpenses = expenses.filter((exp) => {
     if (statusFilter !== "all" && getExpenseStatus(exp) !== statusFilter) return false;
     if (categoryFilter !== "all" && exp.category !== categoryFilter) return false;
     return true;
@@ -219,9 +221,9 @@ export default function ExpenseHistory() {
           )}
 
           <div className="space-y-3">
-            {filteredExpenses.map((exp: any) => {
+            {filteredExpenses.map((exp) => {
               const isPayer = exp.paid_by === user?.id;
-              const myParticipation = exp.expense_participants?.find((p: any) => p.user_id === user?.id);
+              const myParticipation = exp.expense_participants?.find((p) => p.user_id === user?.id);
               const status = getExpenseStatus(exp);
               const { label, icon: StatusIcon, className: statusClass } = statusConfig[status];
 
@@ -276,7 +278,7 @@ export default function ExpenseHistory() {
                     </div>
                     {exp.expense_participants && exp.expense_participants.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
-                        {exp.expense_participants.map((p: any) => (
+                        {exp.expense_participants.map((p) => (
                           <Badge key={p.id} variant="outline" className="text-xs">
                             {p.profiles?.name || "Usuário"}: R$ {Number(p.amount_due).toFixed(2)}
                           </Badge>
@@ -306,7 +308,7 @@ export default function ExpenseHistory() {
               </CardContent>
             </Card>
           )}
-          {settlements.map((s: any) => {
+          {settlements.map((s) => {
             const isPayer = s.from_user_id === user?.id;
             const otherProfile = isPayer ? s.to_profile : s.from_profile;
             const otherName = otherProfile?.name || "Usuário";

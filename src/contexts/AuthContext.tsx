@@ -13,6 +13,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Contas criadas sem o trigger handle_new_user ficam sem perfil, e aí qualquer
+// insert com FK para profiles (amizades, despesas) falha. Cria o perfil se faltar.
+async function ensureProfile(user: User) {
+  await supabase.from("profiles").upsert(
+    { id: user.id, name: (user.user_metadata?.name as string | undefined) ?? "", email: user.email ?? null },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -35,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) ensureProfile(user).catch(() => {});
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signUp = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({

@@ -151,23 +151,23 @@ export function useBalances() {
 
       const balances: Record<string, number> = {};
 
-      (expenses ?? []).forEach((exp: any) => {
+      (expenses ?? []).forEach((exp) => {
         const participants = exp.expense_participants ?? [];
         if (exp.paid_by === user.id) {
-          participants.forEach((p: any) => {
+          participants.forEach((p) => {
             if (p.user_id !== user.id) {
               balances[p.user_id] = (balances[p.user_id] ?? 0) + Number(p.amount_due);
             }
           });
         } else {
-          const myPart = participants.find((p: any) => p.user_id === user.id);
+          const myPart = participants.find((p) => p.user_id === user.id);
           if (myPart) {
             balances[exp.paid_by] = (balances[exp.paid_by] ?? 0) - Number(myPart.amount_due);
           }
         }
       });
 
-      (settlements ?? []).forEach((s: any) => {
+      (settlements ?? []).forEach((s) => {
         if (s.from_user_id === user.id) {
           balances[s.to_user_id] = (balances[s.to_user_id] ?? 0) + Number(s.amount);
         } else if (s.to_user_id === user.id) {

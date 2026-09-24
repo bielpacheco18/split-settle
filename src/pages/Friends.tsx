@@ -54,9 +54,9 @@ export default function Friends() {
         setNotFoundEmail(email);
         return;
       }
-      const alreadyFriend = acceptedFriends.some((f: any) => f.id === data.id);
-      const alreadySent = pendingSent.some((f: any) => f.id === data.id);
-      const alreadyReceived = pendingReceived.some((f: any) => f.id === data.id);
+      const alreadyFriend = acceptedFriends.some((f) => f.id === data.id);
+      const alreadySent = pendingSent.some((f) => f.id === data.id);
+      const alreadyReceived = pendingReceived.some((f) => f.id === data.id);
       if (alreadyFriend) { toast({ title: "Já são amigos!", variant: "destructive" }); return; }
       if (alreadySent) { toast({ title: "Solicitação já enviada", variant: "destructive" }); return; }
       if (alreadyReceived) {
@@ -65,7 +65,7 @@ export default function Friends() {
       }
       addFriendById.mutate(data.id);
       setEmailSearch("");
-    } catch (err: any) {
+    } catch (err) {
       // If table doesn't exist or RLS error, still show invite option
       setNotFoundEmail(email);
     } finally {
@@ -135,7 +135,7 @@ export default function Friends() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {pendingReceived.map((f: any) => (
+            {pendingReceived.map((f) => (
               <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -168,7 +168,7 @@ export default function Friends() {
             <CardTitle className="text-lg">Solicitações enviadas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {pendingSent.map((f: any) => (
+            {pendingSent.map((f) => (
               <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Avatar className="h-9 w-9">
@@ -201,7 +201,7 @@ export default function Friends() {
           {acceptedFriends.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum amigo ainda. Busque pelo email!</p>
           )}
-          {acceptedFriends.map((f: any) => (
+          {acceptedFriends.map((f) => (
             <div key={f.friendshipId} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="h-9 w-9">

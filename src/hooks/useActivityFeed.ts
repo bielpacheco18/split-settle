@@ -49,10 +49,10 @@ export function useActivityFeed(limit = 40) {
       const items: ActivityItem[] = [];
 
       for (const exp of expensesRes.data ?? []) {
-        const e = exp as any;
+        const e = exp;
         const isMine = e.paid_by === user.id;
-        const myPart = (e.expense_participants ?? []).find((p: any) => p.user_id === user.id);
-        const payerName = (e.payer as any)?.name ?? "Alguém";
+        const myPart = (e.expense_participants ?? []).find((p) => p.user_id === user.id);
+        const payerName = e.payer?.name ?? "Alguém";
 
         items.push({
           id: `exp-${e.id}`,
@@ -67,11 +67,11 @@ export function useActivityFeed(limit = 40) {
       }
 
       for (const s of settlementsRes.data ?? []) {
-        const st = s as any;
+        const st = s;
         const isSent = st.from_user_id === user.id;
         const otherName = isSent
-          ? (st.to_profile as any)?.name ?? "Alguém"
-          : (st.from_profile as any)?.name ?? "Alguém";
+          ? st.to_profile?.name ?? "Alguém"
+          : st.from_profile?.name ?? "Alguém";
 
         items.push({
           id: `set-${st.id}`,

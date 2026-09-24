@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { errorMessage } from "@/lib/utils";
 
 export default function Index() {
   const { user } = useAuth();
@@ -71,8 +72,8 @@ export default function Index() {
       toast({ title: "Quitação registrada!" });
       setSettleTarget(null);
       setSettleAmount("");
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro", description: errorMessage(err), variant: "destructive" });
     } finally {
       setSettling(false);
     }
@@ -82,7 +83,7 @@ export default function Index() {
   const totalOwed = balanceEntries.filter(([, v]) => v > 0).reduce((s, [, v]) => s + v, 0);
   const totalOwing = balanceEntries.filter(([, v]) => v < 0).reduce((s, [, v]) => s + Math.abs(v), 0);
 
-  const friendMap = Object.fromEntries(acceptedFriends.map((f: any) => [f.id, f]));
+  const friendMap = Object.fromEntries(acceptedFriends.map((f) => [f.id, f]));
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
